@@ -11,7 +11,7 @@ import java.awt.Graphics2D;
 import java.awt.Color;
 import java.awt.Font;
 
-public class EnhancedSimpleServer {
+public class Main {
     private static Map<String, User> users = new ConcurrentHashMap<>();
     private static Map<String, List<Message>> sessions = new ConcurrentHashMap<>();
     private static Map<String, UserProfile> profiles = new ConcurrentHashMap<>();

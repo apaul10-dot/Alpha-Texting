@@ -15,8 +15,8 @@ A real-time multi-user chat application that enables seamless communication betw
 ### 1. Run the Server
 ```bash
 # Compile and run
-javac EnhancedSimpleServer.java
-java EnhancedSimpleServer
+javac Main.java
+java Main
 
 # Or use the provided script
 chmod +x start-enhanced.sh
@@ -74,14 +74,14 @@ ngrok authtoken [YOUR_TOKEN]
 ngrok http 8082
 
 # Run server with ngrok URL
-java EnhancedSimpleServer https://[xxx].ngrok-free.app
+java Main https://[xxx].ngrok-free.app
 ```
 
 ## File Structure
 
 ```
 AlphaTexting/
-├── EnhancedSimpleServer.java    # Main application
+├── Main.java                    # Main application
 ├── start-enhanced.sh            # Startup script
 ├── README.md                    # This file
 └── DOCUMENTATION.md             # Detailed technical docs
@@ -121,7 +121,7 @@ AlphaTexting/
 **Port already in use:**
 ```bash
 # Kill existing process
-pkill -f EnhancedSimpleServer
+pkill -f Main
 ```
 
 **Can't connect from phone:**

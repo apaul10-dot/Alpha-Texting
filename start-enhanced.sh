@@ -20,11 +20,11 @@ fi
 
 # Kill any existing server process
 echo "🔍 Checking for existing server processes..."
-pkill -f EnhancedSimpleServer 2>/dev/null && echo "✅ Stopped existing server"
+pkill -f Main 2>/dev/null && echo "✅ Stopped existing server"
 
 # Compile the application
 echo "🔨 Compiling Alpha Texting..."
-if javac EnhancedSimpleServer.java; then
+if javac Main.java; then
     echo "✅ Compilation successful"
 else
     echo "❌ Compilation failed"
@@ -60,7 +60,7 @@ echo "================================================"
 # Check if ngrok URL is provided as argument
 if [ $# -gt 0 ]; then
     echo "🌐 Using ngrok URL: $1"
-    java EnhancedSimpleServer "$1"
+    java Main "$1"
 else
-    java EnhancedSimpleServer
+    java Main
 fi 
