@@ -197,6 +197,12 @@ public class Main {
         boolean compactMode;
         boolean readReceipts;
         int sessionTimeout;
+        // Additional functional settings
+        boolean autoRefresh;
+        int refreshInterval; // in milliseconds
+        boolean showTimestamps;
+        boolean showTypingIndicators;
+        int maxMessagesDisplay;
         
         public UserSettings(String username) {
             this.username = username;
@@ -207,6 +213,12 @@ public class Main {
             this.compactMode = false;
             this.readReceipts = true;
             this.sessionTimeout = 60;
+            // Initialize new functional settings
+            this.autoRefresh = true;
+            this.refreshInterval = 1000; // 1 second
+            this.showTimestamps = true;
+            this.showTypingIndicators = true;
+            this.maxMessagesDisplay = 100;
         }
     }
     
@@ -225,21 +237,11 @@ public class Main {
         server.setExecutor(null);
         server.start();
         
-        System.out.println("Alpha Texting Server started!");
-        System.out.println("Local access: http://localhost:8082");
-        System.out.println("Phone access: http://10.0.0.95:8082");
+        System.out.println("http://localhost:8082");
+        System.out.println("http://10.0.0.95:8082");
         if (args.length > 0) {
-            System.out.println("🌍 ngrok access: " + baseUrl);
+            System.out.println(baseUrl);
         }
-        System.out.println("📱 Enhanced features: Profiles, Settings, Structured messaging");
-        System.out.println("🔗 QR codes work with real URLs!");
-        System.out.println("");
-        System.out.println("💡 To use with ngrok:");
-        System.out.println("   1. Run: ngrok http 8082");
-        System.out.println("   2. Copy the https URL from ngrok");
-        System.out.println("   3. Restart with: java EnhancedSimpleServer <ngrok-url>");
-        System.out.println("");
-        System.out.println("Press Ctrl+C to stop the server");
     }
     
     // Enhanced API Handler with comprehensive backend functionality
@@ -1103,6 +1105,40 @@ public class Main {
                 }
             }
             
+            // Update new functional settings
+            String autoRefresh = extractParam(body, "autoRefresh");
+            if (autoRefresh != null) userSettings.autoRefresh = "on".equals(autoRefresh);
+            
+            String refreshInterval = extractParam(body, "refreshInterval");
+            if (refreshInterval != null) {
+                try {
+                    int interval = Integer.parseInt(refreshInterval);
+                    if (interval >= 500 && interval <= 5000) {
+                        userSettings.refreshInterval = interval;
+                    }
+                } catch (NumberFormatException e) {
+                    // Keep default value
+                }
+            }
+            
+            String showTimestamps = extractParam(body, "showTimestamps");
+            if (showTimestamps != null) userSettings.showTimestamps = "on".equals(showTimestamps);
+            
+            String showTypingIndicators = extractParam(body, "showTypingIndicators");
+            if (showTypingIndicators != null) userSettings.showTypingIndicators = "on".equals(showTypingIndicators);
+            
+            String maxMessagesDisplay = extractParam(body, "maxMessagesDisplay");
+            if (maxMessagesDisplay != null) {
+                try {
+                    int maxMessages = Integer.parseInt(maxMessagesDisplay);
+                    if (maxMessages >= 20 && maxMessages <= 500) {
+                        userSettings.maxMessagesDisplay = maxMessages;
+                    }
+                } catch (NumberFormatException e) {
+                    // Keep default value
+                }
+            }
+            
             user.updateActivity();
             
             String html = generateSettingsPage(user, userSettings, "Settings updated successfully!");
@@ -1280,7 +1316,7 @@ public class Main {
                     "<input type='text' id='messageInput' placeholder='Type your message...'>" +
                     "<button onclick='sendMessage()'>📤</button>" +
                     "</div></div></div>" +
-                    "<script>" + getChatScript(sessionId, user.username) + 
+                    "<script>" + getChatScript(sessionId, user.username, userSettings) + 
                     "function copyToClipboard(text){navigator.clipboard.writeText(text).then(()=>{alert('📋 URL copied! Share this with others along with the password.');}).catch(()=>{prompt('Copy this URL:',text);});}" +
                     "</script>" +
                     "</body></html>";
@@ -1343,19 +1379,19 @@ public class Main {
                 (!message.isEmpty() ? "<div class='alert alert-success'>" + message + "</div>" : "") +
                 "<form action='/settings?user=" + user.username + "' method='post' id='settingsForm'>" +
                 "<div class='settings-section'>" +
-                "<h3>🔔 Notifications</h3>" +
+                "<h3>🔔 Notifications & Alerts</h3>" +
                 "<div class='setting-item'>" +
                 "<label class='toggle-label'>" +
                 "<input type='checkbox' name='notifications' class='toggle-input'" + (userSettings.notifications ? " checked" : "") + ">" +
                 "<span class='toggle-slider'></span>" +
-                "Enable Notifications" +
+                "Browser Notifications" +
                 "</label>" +
                 "</div>" +
                 "<div class='setting-item'>" +
                 "<label class='toggle-label'>" +
                 "<input type='checkbox' name='soundEnabled' class='toggle-input'" + (userSettings.soundEnabled ? " checked" : "") + ">" +
                 "<span class='toggle-slider'></span>" +
-                "Sound Notifications" +
+                "Sound Alerts" +
                 "</label>" +
                 "</div>" +
                 "</div>" +
@@ -1381,8 +1417,42 @@ public class Main {
                 "<label class='toggle-label'>" +
                 "<input type='checkbox' name='compactMode' class='toggle-input'" + (userSettings.compactMode ? " checked" : "") + ">" +
                 "<span class='toggle-slider'></span>" +
-                "Compact Mode" +
+                "Compact Message View" +
                 "</label>" +
+                "</div>" +
+                "</div>" +
+                "<div class='settings-section'>" +
+                "<h3>💬 Chat Behavior</h3>" +
+                "<div class='setting-item'>" +
+                "<label class='toggle-label'>" +
+                "<input type='checkbox' name='autoRefresh' class='toggle-input'" + (userSettings.autoRefresh ? " checked" : "") + ">" +
+                "<span class='toggle-slider'></span>" +
+                "Auto-refresh Messages" +
+                "</label>" +
+                "</div>" +
+                "<div class='setting-item'>" +
+                "<label>Refresh Interval:</label>" +
+                "<input type='range' name='refreshInterval' value='" + userSettings.refreshInterval + "' min='500' max='5000' step='500' class='refresh-slider' oninput='updateRefreshDisplay(this.value)'>" +
+                "<span class='refresh-display'>" + (userSettings.refreshInterval / 1000.0) + "s</span>" +
+                "</div>" +
+                "<div class='setting-item'>" +
+                "<label class='toggle-label'>" +
+                "<input type='checkbox' name='showTimestamps' class='toggle-input'" + (userSettings.showTimestamps ? " checked" : "") + ">" +
+                "<span class='toggle-slider'></span>" +
+                "Show Message Timestamps" +
+                "</label>" +
+                "</div>" +
+                "<div class='setting-item'>" +
+                "<label class='toggle-label'>" +
+                "<input type='checkbox' name='showTypingIndicators' class='toggle-input'" + (userSettings.showTypingIndicators ? " checked" : "") + ">" +
+                "<span class='toggle-slider'></span>" +
+                "Show Typing Indicators" +
+                "</label>" +
+                "</div>" +
+                "<div class='setting-item'>" +
+                "<label>Max Messages to Display:</label>" +
+                "<input type='range' name='maxMessagesDisplay' value='" + userSettings.maxMessagesDisplay + "' min='20' max='500' step='10' class='messages-slider' oninput='updateMessagesDisplay(this.value)'>" +
+                "<span class='messages-display'>" + userSettings.maxMessagesDisplay + " messages</span>" +
                 "</div>" +
                 "</div>" +
                 "<div class='settings-section'>" +
@@ -1588,6 +1658,12 @@ public class Main {
                 "function updateTimeoutDisplay(value) {" +
                 "document.querySelector('.timeout-display').textContent = value + ' minutes';" +
                 "}" +
+                "function updateRefreshDisplay(value) {" +
+                "document.querySelector('.refresh-display').textContent = (value / 1000) + 's';" +
+                "}" +
+                "function updateMessagesDisplay(value) {" +
+                "document.querySelector('.messages-display').textContent = value + ' messages';" +
+                "}" +
                 "function resetSettings() {" +
                 "if(confirm('Reset all settings to default values?')) {" +
                 "document.querySelector('select[name=theme]').value = 'auto';" +
@@ -1597,7 +1673,14 @@ public class Main {
                 "document.querySelector('input[name=compactMode]').checked = false;" +
                 "document.querySelector('input[name=readReceipts]').checked = true;" +
                 "document.querySelector('input[name=sessionTimeout]').value = 60;" +
+                "document.querySelector('input[name=autoRefresh]').checked = true;" +
+                "document.querySelector('input[name=refreshInterval]').value = 1000;" +
+                "document.querySelector('input[name=showTimestamps]').checked = true;" +
+                "document.querySelector('input[name=showTypingIndicators]').checked = true;" +
+                "document.querySelector('input[name=maxMessagesDisplay]').value = 100;" +
                 "updateTimeoutDisplay(60);" +
+                "updateRefreshDisplay(1000);" +
+                "updateMessagesDisplay(100);" +
                 "previewTheme('auto');" +
                 "}" +
                 "}" +
@@ -1652,8 +1735,9 @@ public class Main {
                 ".message small{display:block;font-size:0.8em;opacity:0.7;margin-top:5px}";
         }
         
-        private String getChatScript(String sessionId, String username) {
+        private String getChatScript(String sessionId, String username, UserSettings userSettings) {
             return "const sessionId='" + sessionId + "';const username='" + username + "';" +
+                "const userSettings={autoRefresh:" + userSettings.autoRefresh + ",refreshInterval:" + userSettings.refreshInterval + ",showTimestamps:" + userSettings.showTimestamps + ",showTypingIndicators:" + userSettings.showTypingIndicators + ",maxMessagesDisplay:" + userSettings.maxMessagesDisplay + ",compactMode:" + userSettings.compactMode + ",soundEnabled:" + userSettings.soundEnabled + "};" +
                 "let lastMessageCount=0;" +
                 "function sendMessage(){" +
                 "const input=document.getElementById('messageInput');" +
