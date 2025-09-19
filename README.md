@@ -17,6 +17,7 @@ A real-time multi-user chat application that enables seamless communication betw
 # Compile and run
 javac Main.java
 java Main
+```
 
 ### 2. Access the Application
 - **Computer**: Open `http://localhost:8082`
@@ -81,16 +82,3 @@ AlphaTexting/
 ├── README.md                    # This file
 └── DOCUMENTATION.md             # Detailed technical docs
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
