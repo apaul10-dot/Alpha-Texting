@@ -19,8 +19,8 @@ javac Main.java
 java Main
 
 # Or use the provided script
-chmod +x start-enhanced.sh
-./start-enhanced.sh
+chmod +x run.sh
+./run.sh
 ```
 
 ### 2. Access the Application
