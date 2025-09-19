@@ -1,5 +1,6 @@
 # Compiled class files
 *.class
+Main$*.class
 
 # Log files
 *.log

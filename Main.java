@@ -16,6 +16,9 @@ public class Main {
     private static Map<String, List<Message>> sessions = new ConcurrentHashMap<>();
     private static Map<String, UserProfile> profiles = new ConcurrentHashMap<>();
     private static Map<String, UserSettings> settings = new ConcurrentHashMap<>();
+    private static Map<String, Map<String, Set<String>>> messageReactions = new ConcurrentHashMap<>();
+    private static Map<String, Set<String>> typingUsers = new ConcurrentHashMap<>();
+    private static Map<String, Long> lastTypingTime = new ConcurrentHashMap<>();
     private static String baseUrl = "http://10.0.0.95:8082";
     
     // Enhanced User class
@@ -42,20 +45,126 @@ public class Main {
         }
     }
     
-    // Message class for structured messaging
+    // Enhanced Message class with advanced features
     static class Message {
+        String id;
         String content;
         String sender;
         String username;
         String timestamp;
         String deviceType;
+        String replyToId;
+        String replyToContent;
+        String replyToUsername;
+        boolean isEdited;
+        String editedTimestamp;
+        boolean isDeleted;
+        Map<String, Integer> reactions;
         
         public Message(String content, String sender, String deviceType, String username) {
+            this.id = generateMessageId();
             this.content = content;
             this.sender = sender;
             this.deviceType = deviceType;
             this.username = username != null ? username : "Anonymous";
             this.timestamp = new java.util.Date().toString();
+            this.replyToId = null;
+            this.replyToContent = null;
+            this.replyToUsername = null;
+            this.isEdited = false;
+            this.editedTimestamp = null;
+            this.isDeleted = false;
+            this.reactions = new ConcurrentHashMap<>();
+        }
+        
+        public Message(String content, String sender, String deviceType, String username, String replyToId, String replyToContent, String replyToUsername) {
+            this(content, sender, deviceType, username);
+            this.replyToId = replyToId;
+            this.replyToContent = replyToContent;
+            this.replyToUsername = replyToUsername;
+        }
+        
+        private String generateMessageId() {
+            return "msg_" + System.currentTimeMillis() + "_" + (int)(Math.random() * 1000);
+        }
+        
+        public void editMessage(String newContent) {
+            this.content = newContent;
+            this.isEdited = true;
+            this.editedTimestamp = new java.util.Date().toString();
+        }
+        
+        public void deleteMessage() {
+            this.isDeleted = true;
+            this.content = "[Message deleted]";
+        }
+        
+        public void addReaction(String emoji) {
+            reactions.put(emoji, reactions.getOrDefault(emoji, 0) + 1);
+        }
+        
+        public void removeReaction(String emoji) {
+            if (reactions.containsKey(emoji)) {
+                int count = reactions.get(emoji) - 1;
+                if (count <= 0) {
+                    reactions.remove(emoji);
+                } else {
+                    reactions.put(emoji, count);
+                }
+            }
+        }
+    }
+    
+    // Typing indicator class
+    static class TypingIndicator {
+        String sessionId;
+        String username;
+        long timestamp;
+        
+        public TypingIndicator(String sessionId, String username) {
+            this.sessionId = sessionId;
+            this.username = username;
+            this.timestamp = System.currentTimeMillis();
+        }
+        
+        public boolean isExpired() {
+            return System.currentTimeMillis() - timestamp > 3000; // 3 seconds
+        }
+    }
+    
+    // Message search utility
+    static class MessageSearch {
+        public static List<Message> searchMessages(String sessionId, String query) {
+            List<Message> allMessages = sessions.get(sessionId);
+            if (allMessages == null || query == null || query.trim().isEmpty()) {
+                return new ArrayList<>();
+            }
+            
+            List<Message> results = new ArrayList<>();
+            String lowerQuery = query.toLowerCase().trim();
+            
+            for (Message message : allMessages) {
+                if (message.isDeleted) continue;
+                
+                if (message.content.toLowerCase().contains(lowerQuery) ||
+                    message.username.toLowerCase().contains(lowerQuery)) {
+                    results.add(message);
+                }
+            }
+            
+            return results;
+        }
+        
+        public static Message findMessageById(String sessionId, String messageId) {
+            List<Message> messages = sessions.get(sessionId);
+            if (messages == null) return null;
+            
+            for (Message message : messages) {
+                if (message.id.equals(messageId)) {
+                    return message;
+                }
+            }
+            return null;
         }
     }
     
@@ -141,6 +250,16 @@ public class Main {
             
             if (path.startsWith("/api/messages/")) {
                 handleMessages(exchange, path, method);
+            } else if (path.startsWith("/api/reactions/")) {
+                handleReactions(exchange, path, method);
+            } else if (path.startsWith("/api/typing/")) {
+                handleTyping(exchange, path, method);
+            } else if (path.startsWith("/api/search/")) {
+                handleSearch(exchange, path, method);
+            } else if (path.startsWith("/api/edit/")) {
+                handleMessageEdit(exchange, path, method);
+            } else if (path.startsWith("/api/delete/")) {
+                handleMessageDelete(exchange, path, method);
             } else if (path.startsWith("/api/profile/")) {
                 handleProfile(exchange, path, method);
             } else if (path.startsWith("/api/settings/")) {
@@ -166,12 +285,39 @@ public class Main {
                 StringBuilder json = new StringBuilder("[");
                 for (int i = 0; i < messages.size(); i++) {
                     Message msg = messages.get(i);
+                    if (msg.isDeleted) continue; // Skip deleted messages in list view
+                    
                     json.append("{");
+                    json.append("\"id\":\"").append(msg.id).append("\",");
                     json.append("\"content\":\"").append(msg.content.replace("\"", "\\\"")).append("\",");
                     json.append("\"sender\":\"").append(msg.sender).append("\",");
                     json.append("\"username\":\"").append(msg.username).append("\",");
                     json.append("\"deviceType\":\"").append(msg.deviceType).append("\",");
-                    json.append("\"timestamp\":\"").append(msg.timestamp).append("\"");
+                    json.append("\"timestamp\":\"").append(msg.timestamp).append("\",");
+                    json.append("\"isEdited\":").append(msg.isEdited).append(",");
+                    json.append("\"isDeleted\":").append(msg.isDeleted).append(",");
+                    
+                    // Reply information
+                    if (msg.replyToId != null) {
+                        json.append("\"replyToId\":\"").append(msg.replyToId).append("\",");
+                        json.append("\"replyToContent\":\"").append(msg.replyToContent != null ? msg.replyToContent.replace("\"", "\\\"") : "").append("\",");
+                        json.append("\"replyToUsername\":\"").append(msg.replyToUsername != null ? msg.replyToUsername : "").append("\",");
+                    } else {
+                        json.append("\"replyToId\":null,");
+                        json.append("\"replyToContent\":null,");
+                        json.append("\"replyToUsername\":null,");
+                    }
+                    
+                    // Reactions
+                    json.append("\"reactions\":{");
+                    boolean first = true;
+                    for (Map.Entry<String, Integer> reaction : msg.reactions.entrySet()) {
+                        if (!first) json.append(",");
+                        json.append("\"").append(reaction.getKey()).append("\":").append(reaction.getValue());
+                        first = false;
+                    }
+                    json.append("}");
+                    
                     json.append("}");
                     if (i < messages.size() - 1) json.append(",");
                 }
@@ -192,7 +338,22 @@ public class Main {
                     }
                     
                     String msgUsername = extractParam(body, "username");
-                    Message msg = new Message(content, senderDevice, senderDevice, msgUsername);
+                    String replyToId = extractParam(body, "replyToId");
+                    
+                    Message msg;
+                    if (replyToId != null && !replyToId.isEmpty()) {
+                        // This is a reply message
+                        Message replyToMessage = MessageSearch.findMessageById(sessionId, replyToId);
+                        if (replyToMessage != null) {
+                            msg = new Message(content, senderDevice, senderDevice, msgUsername, 
+                                            replyToId, replyToMessage.content, replyToMessage.username);
+                        } else {
+                            msg = new Message(content, senderDevice, senderDevice, msgUsername);
+                        }
+                    } else {
+                        msg = new Message(content, senderDevice, senderDevice, msgUsername);
+                    }
+                    
                     messages.add(msg);
                     
                     // Update user activity if we can identify the user
@@ -376,6 +537,207 @@ public class Main {
                 json.append("}");
                 
                 sendResponse(exchange, json.toString(), 200);
+            }
+        }
+        
+        // Advanced chat feature handlers
+        private void handleReactions(HttpExchange exchange, String path, String method) throws IOException {
+            if (!"POST".equals(method)) {
+                sendResponse(exchange, "{\"error\":\"Method not allowed\"}", 405);
+                return;
+            }
+            
+            String[] pathParts = path.split("/");
+            if (pathParts.length < 5) {
+                sendResponse(exchange, "{\"error\":\"Invalid path\"}", 400);
+                return;
+            }
+            
+            String sessionId = pathParts[3];
+            String messageId = pathParts[4];
+            
+            String body = readRequestBody(exchange);
+            String emoji = extractParam(body, "emoji");
+            String action = extractParam(body, "action");
+            
+            if (emoji == null || action == null) {
+                sendResponse(exchange, "{\"error\":\"Missing emoji or action\"}", 400);
+                return;
+            }
+            
+            Message message = MessageSearch.findMessageById(sessionId, messageId);
+            if (message == null) {
+                sendResponse(exchange, "{\"error\":\"Message not found\"}", 404);
+                return;
+            }
+            
+            if ("add".equals(action)) {
+                message.addReaction(emoji);
+            } else if ("remove".equals(action)) {
+                message.removeReaction(emoji);
+            }
+            
+            sendResponse(exchange, "{\"success\":true}", 200);
+        }
+        
+        private void handleTyping(HttpExchange exchange, String path, String method) throws IOException {
+            if (!"POST".equals(method)) {
+                sendResponse(exchange, "{\"error\":\"Method not allowed\"}", 405);
+                return;
+            }
+            
+            String sessionId = path.substring(13);
+            String body = readRequestBody(exchange);
+            String username = extractParam(body, "username");
+            String action = extractParam(body, "action");
+            
+            if (username == null || action == null) {
+                sendResponse(exchange, "{\"error\":\"Missing username or action\"}", 400);
+                return;
+            }
+            
+            Set<String> typingInSession = typingUsers.getOrDefault(sessionId, new HashSet<>());
+            
+            if ("start".equals(action)) {
+                typingInSession.add(username);
+                lastTypingTime.put(sessionId + ":" + username, System.currentTimeMillis());
+            } else if ("stop".equals(action)) {
+                typingInSession.remove(username);
+                lastTypingTime.remove(sessionId + ":" + username);
+            }
+            
+            typingUsers.put(sessionId, typingInSession);
+            cleanupExpiredTyping(sessionId);
+            
+            sendResponse(exchange, "{\"success\":true}", 200);
+        }
+        
+        private void handleSearch(HttpExchange exchange, String path, String method) throws IOException {
+            if (!"GET".equals(method)) {
+                sendResponse(exchange, "{\"error\":\"Method not allowed\"}", 405);
+                return;
+            }
+            
+            String sessionId = path.substring(12);
+            String query = exchange.getRequestURI().getQuery();
+            String searchTerm = extractParam(query, "q");
+            
+            if (searchTerm == null || searchTerm.trim().isEmpty()) {
+                sendResponse(exchange, "{\"results\":[]}", 200);
+                return;
+            }
+            
+            List<Message> results = MessageSearch.searchMessages(sessionId, searchTerm);
+            
+            StringBuilder json = new StringBuilder("{\"results\":[");
+            for (int i = 0; i < results.size(); i++) {
+                Message msg = results.get(i);
+                json.append("{");
+                json.append("\"id\":\"").append(msg.id).append("\",");
+                json.append("\"content\":\"").append(msg.content.replace("\"", "\\\"")).append("\",");
+                json.append("\"username\":\"").append(msg.username).append("\",");
+                json.append("\"timestamp\":\"").append(msg.timestamp).append("\"");
+                json.append("}");
+                if (i < results.size() - 1) json.append(",");
+            }
+            json.append("]}");
+            
+            sendResponse(exchange, json.toString(), 200);
+        }
+        
+        private void handleMessageEdit(HttpExchange exchange, String path, String method) throws IOException {
+            if (!"POST".equals(method)) {
+                sendResponse(exchange, "{\"error\":\"Method not allowed\"}", 405);
+                return;
+            }
+            
+            String[] pathParts = path.split("/");
+            if (pathParts.length < 5) {
+                sendResponse(exchange, "{\"error\":\"Invalid path\"}", 400);
+                return;
+            }
+            
+            String sessionId = pathParts[3];
+            String messageId = pathParts[4];
+            
+            String body = readRequestBody(exchange);
+            String newContent = extractParam(body, "content");
+            String username = extractParam(body, "username");
+            
+            if (newContent == null || username == null) {
+                sendResponse(exchange, "{\"error\":\"Missing content or username\"}", 400);
+                return;
+            }
+            
+            Message message = MessageSearch.findMessageById(sessionId, messageId);
+            if (message == null) {
+                sendResponse(exchange, "{\"error\":\"Message not found\"}", 404);
+                return;
+            }
+            
+            if (!message.username.equals(username)) {
+                sendResponse(exchange, "{\"error\":\"Unauthorized\"}", 403);
+                return;
+            }
+            
+            message.editMessage(newContent);
+            sendResponse(exchange, "{\"success\":true}", 200);
+        }
+        
+        private void handleMessageDelete(HttpExchange exchange, String path, String method) throws IOException {
+            if (!"POST".equals(method)) {
+                sendResponse(exchange, "{\"error\":\"Method not allowed\"}", 405);
+                return;
+            }
+            
+            String[] pathParts = path.split("/");
+            if (pathParts.length < 5) {
+                sendResponse(exchange, "{\"error\":\"Invalid path\"}", 400);
+                return;
+            }
+            
+            String sessionId = pathParts[3];
+            String messageId = pathParts[4];
+            
+            String body = readRequestBody(exchange);
+            String username = extractParam(body, "username");
+            
+            if (username == null) {
+                sendResponse(exchange, "{\"error\":\"Missing username\"}", 400);
+                return;
+            }
+            
+            Message message = MessageSearch.findMessageById(sessionId, messageId);
+            if (message == null) {
+                sendResponse(exchange, "{\"error\":\"Message not found\"}", 404);
+                return;
+            }
+            
+            if (!message.username.equals(username)) {
+                sendResponse(exchange, "{\"error\":\"Unauthorized\"}", 403);
+                return;
+            }
+            
+            message.deleteMessage();
+            sendResponse(exchange, "{\"success\":true}", 200);
+        }
+        
+        private void cleanupExpiredTyping(String sessionId) {
+            Set<String> typingInSession = typingUsers.get(sessionId);
+            if (typingInSession == null) return;
+            
+            long currentTime = System.currentTimeMillis();
+            Iterator<String> iterator = typingInSession.iterator();
+            
+            while (iterator.hasNext()) {
+                String user = iterator.next();
+                String key = sessionId + ":" + user;
+                Long lastTime = lastTypingTime.get(key);
+                
+                if (lastTime == null || currentTime - lastTime > 3000) {
+                    iterator.remove();
+                    lastTypingTime.remove(key);
+                }
             }
         }
         
