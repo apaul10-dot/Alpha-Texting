@@ -18,11 +18,6 @@ A real-time multi-user chat application that enables seamless communication betw
 javac Main.java
 java Main
 
-# Or use the provided script
-chmod +x run.sh
-./run.sh
-```
-
 ### 2. Access the Application
 - **Computer**: Open `http://localhost:8082`
 - **Mobile**: Use `http://[YOUR_IP]:8082` (replace with your computer's IP)
