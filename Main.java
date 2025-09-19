@@ -1168,27 +1168,45 @@ public class Main {
         private String generateHomePage(String errorMessage) {
             return "<!DOCTYPE html><html><head><title>Alpha Texting</title>" +
                 "<meta name='viewport' content='width=device-width, initial-scale=1'>" +
-                "<style>" + getBaseCSS() + "</style></head><body>" +
+                "<style>" + getImprovedHomeCSS() + "</style></head><body>" +
+                "<div class='hero-section'>" +
                 "<div class='container'>" +
                 "<div class='header'>" +
-                "<h1>Alpha Texting</h1>" +
-                "<p>Professional chat with profiles, settings & real-time sync</p>" +
+                "<h1 class='main-title'>Alpha Texting</h1>" +
+                "<p class='subtitle'>Professional cross-device chat with advanced features</p>" +
                 "</div>" +
                 (!errorMessage.isEmpty() ? "<div class='alert alert-error'>" + errorMessage + "</div>" : "") +
+                "<div class='auth-container'>" +
+                "<div class='auth-card login-card'>" +
+                "<h3>Welcome Back</h3>" +
                 "<form action='/login' method='post'>" +
-                "<div class='form-group'><label>Username:</label><input type='text' name='username' required></div>" +
-                "<button type='submit' class='btn btn-primary'>Sign In</button></form>" +
-                "<div class='divider'>or create new account</div>" +
+                "<div class='form-group'>" +
+                "<input type='text' name='username' placeholder='Enter your username' required>" +
+                "</div>" +
+                "<button type='submit' class='btn btn-primary'>Sign In</button>" +
+                "</form>" +
+                "</div>" +
+                "<div class='auth-card register-card'>" +
+                "<h3>Create Account</h3>" +
                 "<form action='/register' method='post'>" +
-                "<div class='form-group'><label>Username:</label><input type='text' name='username' required></div>" +
-                "<div class='form-group'><label>Display Name:</label><input type='text' name='displayName' required></div>" +
-                "<button type='submit' class='btn btn-secondary'>Create Account</button></form>" +
+                "<div class='form-group'>" +
+                "<input type='text' name='username' placeholder='Choose username' required>" +
+                "</div>" +
+                "<div class='form-group'>" +
+                "<input type='text' name='displayName' placeholder='Your display name' required>" +
+                "</div>" +
+                "<button type='submit' class='btn btn-secondary'>Get Started</button>" +
+                "</form>" +
+                "</div>" +
+                "</div>" +
                 "<div class='features'>" +
-                "<div class='feature'><span class='feature-icon'>•</span><span>User Profiles</span></div>" +
-                "<div class='feature'><span class='feature-icon'>•</span><span>Custom Settings</span></div>" +
-                "<div class='feature'><span class='feature-icon'>•</span><span>Multi-User Chat</span></div>" +
-                "<div class='feature'><span class='feature-icon'>•</span><span>Cross-Device Sync</span></div>" +
-                "</div></div></body></html>";
+                "<div class='feature'><div class='feature-icon'>💬</div><div class='feature-text'><strong>Advanced Messaging</strong><br>Reactions, replies, and real-time sync</div></div>" +
+                "<div class='feature'><div class='feature-icon'>🔍</div><div class='feature-text'><strong>Message Search</strong><br>Find any message instantly</div></div>" +
+                "<div class='feature'><div class='feature-icon'>🌙</div><div class='feature-text'><strong>Dark Mode</strong><br>Easy on the eyes</div></div>" +
+                "<div class='feature'><div class='feature-icon'>📱</div><div class='feature-text'><strong>Cross-Device</strong><br>Chat between phone and computer</div></div>" +
+                "</div>" +
+                "</div>" +
+                "</div></body></html>";
         }
         
         private String generateDashboardPage(User user, String sessionId) {
@@ -1198,9 +1216,11 @@ public class Main {
         private String generateDashboardPage(User user, String sessionId, String message) {
             if (sessionId == null) {
                 // Show session creation form
+                UserSettings userSettings = settings.getOrDefault(user.username, new UserSettings(user.username));
+                String themeCSS = getThemeCSS(userSettings.theme);
                 return "<!DOCTYPE html><html><head><title>Dashboard - Alpha Texting</title>" +
                     "<meta name='viewport' content='width=device-width, initial-scale=1'>" +
-                    "<style>" + getBaseCSS() + getDashboardCSS() + "</style></head><body>" +
+                    "<style>" + getBaseCSS() + getDashboardCSS() + themeCSS + "</style></head><body class='" + userSettings.theme + "-theme'>" +
                     generateNavbar(user) +
                     "<div class='container'>" +
                     "<div class='stats-grid'>" +
@@ -1229,10 +1249,12 @@ public class Main {
                     "</div></div></body></html>";
             } else {
                 // Show active session
+                UserSettings userSettings = settings.getOrDefault(user.username, new UserSettings(user.username));
+                String themeCSS = getThemeCSS(userSettings.theme);
                 String chatUrl = "http://10.0.0.95:8082/chat/" + sessionId;
                 return "<!DOCTYPE html><html><head><title>Dashboard - Alpha Texting</title>" +
                     "<meta name='viewport' content='width=device-width, initial-scale=1'>" +
-                    "<style>" + getBaseCSS() + getDashboardCSS() + "</style></head><body>" +
+                    "<style>" + getBaseCSS() + getDashboardCSS() + themeCSS + "</style></head><body class='" + userSettings.theme + "-theme'>" +
                     generateNavbar(user) +
                     "<div class='container'>" +
                     "<div class='session-active card'>" +
@@ -1310,55 +1332,81 @@ public class Main {
         }
         
         private String generateSettingsPage(User user, UserSettings userSettings, String message) {
-            return "<!DOCTYPE html><html><head><title>Settings - Enhanced AlphaTexting</title>" +
+            String themeCSS = getThemeCSS(userSettings.theme);
+            return "<!DOCTYPE html><html><head><title>Settings - Alpha Texting</title>" +
                 "<meta name='viewport' content='width=device-width, initial-scale=1'>" +
-                "<style>" + getBaseCSS() + getSettingsCSS() + "</style></head><body>" +
+                "<style>" + getBaseCSS() + getSettingsCSS() + themeCSS + "</style></head><body class='" + userSettings.theme + "-theme'>" +
                 generateNavbar(user) +
                 "<div class='container'>" +
                 "<div class='settings-card card'>" +
-                "<h2>⚙️ Settings</h2>" +
+                "<h2>Settings</h2>" +
                 (!message.isEmpty() ? "<div class='alert alert-success'>" + message + "</div>" : "") +
-                "<form action='/settings?user=" + user.username + "' method='post'>" +
+                "<form action='/settings?user=" + user.username + "' method='post' id='settingsForm'>" +
                 "<div class='settings-section'>" +
                 "<h3>🔔 Notifications</h3>" +
                 "<div class='setting-item'>" +
-                "<label><input type='checkbox' name='notifications'" + (userSettings.notifications ? " checked" : "") + "> Enable Notifications</label>" +
+                "<label class='toggle-label'>" +
+                "<input type='checkbox' name='notifications' class='toggle-input'" + (userSettings.notifications ? " checked" : "") + ">" +
+                "<span class='toggle-slider'></span>" +
+                "Enable Notifications" +
+                "</label>" +
                 "</div>" +
                 "<div class='setting-item'>" +
-                "<label><input type='checkbox' name='soundEnabled'" + (userSettings.soundEnabled ? " checked" : "") + "> Sound Notifications</label>" +
+                "<label class='toggle-label'>" +
+                "<input type='checkbox' name='soundEnabled' class='toggle-input'" + (userSettings.soundEnabled ? " checked" : "") + ">" +
+                "<span class='toggle-slider'></span>" +
+                "Sound Notifications" +
+                "</label>" +
                 "</div>" +
                 "</div>" +
                 "<div class='settings-section'>" +
                 "<h3>🎨 Appearance</h3>" +
                 "<div class='setting-item'>" +
-                "<label>Theme: <select name='theme'>" +
-                "<option value='auto'" + ("auto".equals(userSettings.theme) ? " selected" : "") + ">Auto</option>" +
-                "<option value='light'" + ("light".equals(userSettings.theme) ? " selected" : "") + ">Light</option>" +
-                "<option value='dark'" + ("dark".equals(userSettings.theme) ? " selected" : "") + ">Dark</option>" +
-                "</select></label>" +
+                "<label>Theme:</label>" +
+                "<select name='theme' class='theme-selector' onchange='previewTheme(this.value)'>" +
+                "<option value='auto'" + ("auto".equals(userSettings.theme) ? " selected" : "") + ">Auto (System)</option>" +
+                "<option value='light'" + ("light".equals(userSettings.theme) ? " selected" : "") + ">Light Mode</option>" +
+                "<option value='dark'" + ("dark".equals(userSettings.theme) ? " selected" : "") + ">Dark Mode</option>" +
+                "</select>" +
                 "</div>" +
                 "<div class='setting-item'>" +
-                "<label>Language: <select name='language'>" +
+                "<label>Language:</label>" +
+                "<select name='language' class='language-selector'>" +
                 "<option value='english'" + ("english".equals(userSettings.language) ? " selected" : "") + ">English</option>" +
                 "<option value='spanish'" + ("spanish".equals(userSettings.language) ? " selected" : "") + ">Español</option>" +
                 "<option value='french'" + ("french".equals(userSettings.language) ? " selected" : "") + ">Français</option>" +
-                "</select></label>" +
+                "</select>" +
                 "</div>" +
                 "<div class='setting-item'>" +
-                "<label><input type='checkbox' name='compactMode'" + (userSettings.compactMode ? " checked" : "") + "> Compact Mode</label>" +
+                "<label class='toggle-label'>" +
+                "<input type='checkbox' name='compactMode' class='toggle-input'" + (userSettings.compactMode ? " checked" : "") + ">" +
+                "<span class='toggle-slider'></span>" +
+                "Compact Mode" +
+                "</label>" +
                 "</div>" +
                 "</div>" +
                 "<div class='settings-section'>" +
-                "<h3>🔒 Privacy</h3>" +
+                "<h3>🔒 Privacy & Security</h3>" +
                 "<div class='setting-item'>" +
-                "<label><input type='checkbox' name='readReceipts'" + (userSettings.readReceipts ? " checked" : "") + "> Read Receipts</label>" +
+                "<label class='toggle-label'>" +
+                "<input type='checkbox' name='readReceipts' class='toggle-input'" + (userSettings.readReceipts ? " checked" : "") + ">" +
+                "<span class='toggle-slider'></span>" +
+                "Read Receipts" +
+                "</label>" +
                 "</div>" +
                 "<div class='setting-item'>" +
-                "<label>Session Timeout: <input type='number' name='sessionTimeout' value='" + userSettings.sessionTimeout + "' min='5' max='300'> minutes</label>" +
+                "<label>Session Timeout:</label>" +
+                "<input type='range' name='sessionTimeout' value='" + userSettings.sessionTimeout + "' min='5' max='300' class='timeout-slider' oninput='updateTimeoutDisplay(this.value)'>" +
+                "<span class='timeout-display'>" + userSettings.sessionTimeout + " minutes</span>" +
                 "</div>" +
                 "</div>" +
+                "<div class='settings-actions'>" +
                 "<button type='submit' class='btn btn-primary'>Save Settings</button>" +
-                "</form></div></div></body></html>";
+                "<button type='button' class='btn btn-secondary' onclick='resetSettings()'>Reset to Default</button>" +
+                "</div>" +
+                "</form></div></div>" +
+                "<script>" + getSettingsScript() + "</script>" +
+                "</body></html>";
         }
         
         private String generateMobileChatPage(String sessionId) {
@@ -1415,6 +1463,42 @@ public class Main {
         }
         
         // CSS and JavaScript methods
+        private String getImprovedHomeCSS() {
+            return "*{margin:0;padding:0;box-sizing:border-box}" +
+                "body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;color:#333}" +
+                ".hero-section{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}" +
+                ".container{max-width:1200px;width:100%;text-align:center}" +
+                ".header{margin-bottom:60px}" +
+                ".main-title{font-size:4rem;font-weight:800;color:white;margin-bottom:20px;text-shadow:2px 2px 4px rgba(0,0,0,0.3);letter-spacing:-2px}" +
+                ".subtitle{font-size:1.3rem;color:rgba(255,255,255,0.9);margin-bottom:40px;font-weight:300}" +
+                ".auth-container{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-bottom:80px;max-width:800px;margin-left:auto;margin-right:auto}" +
+                ".auth-card{background:rgba(255,255,255,0.95);padding:40px;border-radius:20px;box-shadow:0 20px 40px rgba(0,0,0,0.1);backdrop-filter:blur(10px);transition:transform 0.3s ease,box-shadow 0.3s ease}" +
+                ".auth-card:hover{transform:translateY(-5px);box-shadow:0 25px 50px rgba(0,0,0,0.15)}" +
+                ".auth-card h3{color:#667eea;margin-bottom:30px;font-size:1.5rem;font-weight:600}" +
+                ".form-group{margin-bottom:25px}" +
+                ".form-group input{width:100%;padding:15px 20px;border:2px solid #e2e8f0;border-radius:12px;font-size:16px;transition:all 0.3s ease;background:#f8f9fa}" +
+                ".form-group input:focus{outline:none;border-color:#667eea;background:white;box-shadow:0 0 0 3px rgba(102,126,234,0.1)}" +
+                ".form-group input::placeholder{color:#a0aec0}" +
+                ".btn{width:100%;padding:15px;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;transition:all 0.3s ease;text-transform:uppercase;letter-spacing:1px}" +
+                ".btn-primary{background:linear-gradient(135deg,#667eea,#764ba2);color:white;box-shadow:0 4px 15px rgba(102,126,234,0.4)}" +
+                ".btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(102,126,234,0.6)}" +
+                ".btn-secondary{background:linear-gradient(135deg,#764ba2,#667eea);color:white;box-shadow:0 4px 15px rgba(118,75,162,0.4)}" +
+                ".btn-secondary:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(118,75,162,0.6)}" +
+                ".features{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:30px;max-width:1000px;margin:0 auto}" +
+                ".feature{background:rgba(255,255,255,0.1);padding:30px;border-radius:20px;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.2);transition:all 0.3s ease}" +
+                ".feature:hover{background:rgba(255,255,255,0.15);transform:translateY(-5px)}" +
+                ".feature-icon{font-size:3rem;margin-bottom:20px;display:block}" +
+                ".feature-text{color:white;text-align:left}" +
+                ".feature-text strong{display:block;font-size:1.2rem;margin-bottom:8px}" +
+                ".alert{padding:20px;border-radius:12px;margin:20px 0;background:#fee;border:2px solid #fcc;color:#c33;font-weight:500}" +
+                "@media(max-width:768px){" +
+                ".main-title{font-size:2.5rem}" +
+                ".auth-container{grid-template-columns:1fr;gap:20px}" +
+                ".features{grid-template-columns:1fr}" +
+                ".container{padding:0 20px}" +
+                "}";
+        }
+        
         private String getBaseCSS() {
             return "body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);margin:0;padding:0;min-height:100vh}" +
                 ".container{max-width:1200px;margin:0 auto;padding:20px}" +
@@ -1476,14 +1560,78 @@ public class Main {
                 ".username{color:#666;margin:5px 0;font-size:1.1em}";
         }
         
+        private String getThemeCSS(String theme) {
+            if ("dark".equals(theme)) {
+                return ".dark-theme{background:#1a1a1a !important;color:#e2e8f0 !important}" +
+                    ".dark-theme .navbar{background:rgba(30,30,30,0.95) !important;color:#e2e8f0 !important}" +
+                    ".dark-theme .nav-brand{color:#667eea !important}" +
+                    ".dark-theme .nav-menu a{color:#e2e8f0 !important}" +
+                    ".dark-theme .card{background:rgba(40,40,40,0.95) !important;color:#e2e8f0 !important}" +
+                    ".dark-theme .settings-section{background:rgba(60,60,60,0.3) !important}" +
+                    ".dark-theme .form-group input, .dark-theme select{background:#2d3748 !important;border-color:#4a5568 !important;color:#e2e8f0 !important}" +
+                    ".dark-theme .form-group input:focus, .dark-theme select:focus{border-color:#667eea !important;background:#374151 !important}" +
+                    ".dark-theme .message{background:#374151 !important;border-color:#4a5568 !important}" +
+                    ".dark-theme .chat-container{background:#2d3748 !important}";
+            } else if ("light".equals(theme)) {
+                return ".light-theme{background:#f7fafc !important;color:#2d3748 !important}" +
+                    ".light-theme .navbar{background:rgba(255,255,255,0.95) !important}" +
+                    ".light-theme .card{background:rgba(255,255,255,0.95) !important}" +
+                    ".light-theme .settings-section{background:rgba(247,250,252,0.8) !important}";
+            }
+            return ""; // auto theme uses default styles
+        }
+        
+        private String getSettingsScript() {
+            return "function previewTheme(theme) {" +
+                "document.body.className = theme + '-theme';" +
+                "}" +
+                "function updateTimeoutDisplay(value) {" +
+                "document.querySelector('.timeout-display').textContent = value + ' minutes';" +
+                "}" +
+                "function resetSettings() {" +
+                "if(confirm('Reset all settings to default values?')) {" +
+                "document.querySelector('select[name=theme]').value = 'auto';" +
+                "document.querySelector('select[name=language]').value = 'english';" +
+                "document.querySelector('input[name=notifications]').checked = true;" +
+                "document.querySelector('input[name=soundEnabled]').checked = true;" +
+                "document.querySelector('input[name=compactMode]').checked = false;" +
+                "document.querySelector('input[name=readReceipts]').checked = true;" +
+                "document.querySelector('input[name=sessionTimeout]').value = 60;" +
+                "updateTimeoutDisplay(60);" +
+                "previewTheme('auto');" +
+                "}" +
+                "}" +
+                "document.addEventListener('DOMContentLoaded', function() {" +
+                "const toggles = document.querySelectorAll('.toggle-input');" +
+                "toggles.forEach(toggle => {" +
+                "toggle.addEventListener('change', function() {" +
+                "this.parentElement.classList.toggle('active', this.checked);" +
+                "});" +
+                "if(toggle.checked) toggle.parentElement.classList.add('active');" +
+                "});" +
+                "});";
+        }
+        
         private String getSettingsCSS() {
-            return ".settings-section{margin:30px 0;padding:20px;background:rgba(102,126,234,0.05);border-radius:10px;border-left:4px solid #667eea}" +
-                ".settings-section h3{margin:0 0 20px 0;color:#667eea}" +
-                ".setting-item{margin:15px 0;display:flex;align-items:center;gap:10px}" +
-                ".setting-item label{display:flex;align-items:center;gap:8px;cursor:pointer}" +
-                ".setting-item input[type=checkbox]{width:auto;margin:0}" +
-                ".setting-item select{width:auto;margin:0}" +
-                ".setting-item input[type=number]{width:80px;margin:0}";
+            return ".settings-section{margin:30px 0;padding:25px;background:rgba(102,126,234,0.05);border-radius:15px;border-left:4px solid #667eea;transition:all 0.3s ease}" +
+                ".settings-section:hover{background:rgba(102,126,234,0.08)}" +
+                ".settings-section h3{margin:0 0 25px 0;color:#667eea;font-size:1.3rem}" +
+                ".setting-item{margin:20px 0;display:flex;align-items:center;justify-content:space-between;padding:15px 0;border-bottom:1px solid rgba(0,0,0,0.05)}" +
+                ".setting-item:last-child{border-bottom:none}" +
+                ".toggle-label{display:flex;align-items:center;gap:15px;cursor:pointer;font-weight:500;flex:1}" +
+                ".toggle-input{display:none}" +
+                ".toggle-slider{width:50px;height:25px;background:#ccc;border-radius:25px;position:relative;transition:all 0.3s ease;cursor:pointer}" +
+                ".toggle-slider:before{content:'';position:absolute;height:19px;width:19px;left:3px;top:3px;background:white;border-radius:50%;transition:all 0.3s ease}" +
+                ".toggle-input:checked + .toggle-slider{background:#667eea}" +
+                ".toggle-input:checked + .toggle-slider:before{transform:translateX(25px)}" +
+                ".theme-selector, .language-selector{padding:10px 15px;border:2px solid #e2e8f0;border-radius:8px;font-size:14px;min-width:150px;cursor:pointer;transition:all 0.3s ease}" +
+                ".theme-selector:focus, .language-selector:focus{outline:none;border-color:#667eea;box-shadow:0 0 0 3px rgba(102,126,234,0.1)}" +
+                ".timeout-slider{width:200px;height:6px;border-radius:3px;background:#e2e8f0;outline:none;cursor:pointer;transition:all 0.3s ease}" +
+                ".timeout-slider::-webkit-slider-thumb{appearance:none;width:20px;height:20px;border-radius:50%;background:#667eea;cursor:pointer;transition:all 0.3s ease}" +
+                ".timeout-slider::-webkit-slider-thumb:hover{transform:scale(1.1)}" +
+                ".timeout-display{background:#667eea;color:white;padding:5px 12px;border-radius:15px;font-size:12px;font-weight:600;margin-left:15px}" +
+                ".settings-actions{display:flex;gap:15px;justify-content:center;margin-top:40px;padding-top:30px;border-top:2px solid rgba(0,0,0,0.05)}" +
+                ".settings-actions .btn{min-width:150px}";
         }
         
         private String getMobileChatCSS() {
