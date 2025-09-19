@@ -87,81 +87,15 @@ AlphaTexting/
 └── DOCUMENTATION.md             # Detailed technical docs
 ```
 
-## API Endpoints
 
-### Authentication
-- `POST /login` - User login
-- `POST /register` - User registration
 
-### Chat
-- `GET /dashboard` - User dashboard
-- `POST /dashboard` - Create session
-- `GET /chat/{sessionId}` - Mobile chat interface
 
-### Messages
-- `GET /api/messages/{sessionId}` - Get messages
-- `POST /api/messages/{sessionId}` - Send message
 
-### Profile
-- `GET /profile` - Profile page
-- `POST /profile` - Update profile
-- `GET /settings` - Settings page
-- `POST /settings` - Update settings
 
-## Requirements
 
-- Java 11 or higher
-- Port 8082 available
-- Network access between devices
 
-## Troubleshooting
 
-### Common Issues
 
-**Port already in use:**
-```bash
-# Kill existing process
-pkill -f Main
-```
 
-**Can't connect from phone:**
-- Ensure devices are on same network
-- Check firewall settings
-- Use IP address, not localhost
 
-**Messages not syncing:**
-- Check browser console for errors
-- Verify API endpoints are accessible
-- Ensure JavaScript is enabled
-
-## Development
-
-### Key Components
-- **HTTP Server**: Built-in Java HTTP server
-- **Session Management**: Password-based chat rooms
-- **User Management**: Registration, profiles, settings
-- **Real-Time Updates**: HTTP polling mechanism
-- **CORS Support**: Cross-origin resource sharing
-
-### Data Storage
-- In-memory storage using ConcurrentHashMap
-- Thread-safe operations
-- Data persists until server restart
-
-For detailed technical documentation, see `DOCUMENTATION.md`.
-
-## License
-
-MIT License - Feel free to use and modify as needed.
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
----
-
-**Note**: This is a development version. For production use, consider adding HTTPS, database persistence, and proper authentication. 
+ation.
